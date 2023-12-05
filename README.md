@@ -1,37 +1,23 @@
-# v4-template
-### **A template for writing Uniswap v4 Hooks 🦄**
+# Uniswap V4 Gas Subsidy
+This contract will take charge swappers and liquidity providers more gas when gas is cheap, and this gas will be stored and saved to be used when gas is high.
 
-[`Use this Template`](https://github.com/saucepoint/v4-template/generate)
+**Why is this useful?**
+- A DEX is a product, and when the product becomes MORE expensive to use at the peak time, it makes for a bad user experience.
+- It could also potentially drive more trading to this DEX.
+- Most traders do not care about the gas fees unless they are insanely high. If a swap costs on average $3, and they are getting it for $1 on a sunday in the middle of the night, they won't care if it's $1.25. 
 
-1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
-2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
-3. The scripts in the v4-template are written so that you can
-   - Designed for Goerli, but usable for other networks
-   - Deploy a hook contract
-   - Create a liquidity pool on V4
-   - Add liquidity to a pool
-   - Swap tokens on a pool
-6. This template is built using Foundry
+**Why am I building it**
+- This will not go into production, I want to build a hook that is small enough to implement in a few days, that has some benefit. Not sure if it would have real use, as there are problems (see below)  
 
-<details>
-<summary>Updating to v4-template:latest</summary>
+**Problems**
+- Bots will just take advantage of the gas subsidy and drain it pretty quick during high times
+- In an extreme event, months of subsidy could be drained in a few minutes or hours, or it could be such a small subsidy that it is almost unnoticable, making the whole design moot. The math could be worked out to try to optimize if, but if the event is extreme enough it probably wouldn't matter
 
-This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers: 
-```bash
-git remote add template https://github.com/uniswapfoundation/v4-template
-git fetch template
-git merge template/main <BRANCH> --allow-unrelated-histories
-```
-
-</details>
-
----
-
-# Linux / WSL2 (TSTORE/TLOAD)
-
-Please update [foundry.toml](foundry.toml#L9) to use the linux `solc`
-
-Mac users do not need to change anything by default
+## Design
+- Get the average gas price cost on ethereum since the launch of uniswao v2, for a long enough average.
+- The bottom 20% of transactions must pay a 10% premium of ETH in gas
+- The top 20% of transactions get a 10% reduction in gas on their costs, until the subsidy runs out
+- The numbers I chose are arbitrary, nothing concrete behind them, as this is not going to be production code. 
 
 ## Set up
 
@@ -42,7 +28,7 @@ forge install
 forge test
 ```
 
-### Local Development (Anvil)
+## Local Development (Anvil)
 
 Because v4 depends on TSTORE and its *business licensed*, you can only deploy & test hooks on [anvil](https://book.getfoundry.sh/anvil/)
 
@@ -58,82 +44,26 @@ forge script script/Anvil.s.sol \
     --broadcast
 ```
 
-<details>
-<summary><h3>Goerli Testnet</h3></summary>
 
-NOTE: 11/21/2023, the Goerli deployment is out of sync with the latest v4. It is recommend to use local testing instead
+## v4-template Information
+[`Use this Template`](https://github.com/saucepoint/v4-template/generate)
 
-For testing on Goerli Testnet the Uniswap Foundation team has deployed a slimmed down version of the V4 contract (due to current contract size limits) on the network.
+1. The example hook [Counter.sol](src/Counter.sol) demonstrates the `beforeSwap()` and `afterSwap()` hooks
+2. The test template [Counter.t.sol](test/Counter.t.sol) preconfigures the v4 pool manager, test tokens, and test liquidity.
+3. The scripts in the v4-template are written so that you can
+   - Designed for Goerli, but usable for other networks
+   - Deploy a hook contract
+   - Create a liquidity pool on V4
+   - Add liquidity to a pool
+   - Swap tokens on a pool
+4. This template is built using Foundry
 
-The relevant addresses for testing on Goerli are the ones below
+### Updating to v4-template:latest
 
+This template is actively maintained -- you can update the v4 dependencies, scripts, and helpers: 
 ```bash
-POOL_MANAGER = 0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b
-POOL_MODIFY_POSITION_TEST = 0x83feDBeD11B3667f40263a88e8435fca51A03F8C
-SWAP_ROUTER = 0xF8AADC65Bf1Ec1645ef931317fD48ffa734a185c
+git remote add template https://github.com/uniswapfoundation/v4-template
+git fetch template
+git merge template/main <BRANCH> --allow-unrelated-histories
 ```
-
-Update the following command with your own private key:
-
-```
-forge script script/00_Counter.s.sol \
---rpc-url https://rpc.ankr.com/eth_goerli \
---private-key [your_private_key_on_goerli_here] \
---broadcast
-```
-
-### *Deploying your own Tokens For Testing*
-
-Because V4 is still in testing mode, most networks don't have liquidity pools live on V4 testnets. We recommend launching your own test tokens and expirementing with them that. We've included in the templace a Mock UNI and Mock USDC contract for easier testing. You can deploy the contracts and when you do you'll have 1 million mock tokens to test with for each contract. See deployment commands below
-
-```
-forge create script/mocks/mUNI.sol:MockUNI \
---rpc-url [your_rpc_url_here] \
---private-key [your_private_key_on_goerli_here]
-```
-
-```
-forge create script/mocks/mUSDC.sol:MockUSDC \
---rpc-url [your_rpc_url_here] \
---private-key [your_private_key_on_goerli_here]
-```
-
-</details>
-
----
-
-<details>
-<summary><h2>Troubleshooting</h2></summary>
-
-
-
-### *Permission Denied*
-
-When installing dependencies with `forge install`, Github may throw a `Permission Denied` error
-
-Typically caused by missing Github SSH keys, and can be resolved by following the steps [here](https://docs.github.com/en/github/authenticating-to-github/connecting-to-github-with-ssh) 
-
-Or [adding the keys to your ssh-agent](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent#adding-your-ssh-key-to-the-ssh-agent), if you have already uploaded SSH keys
-
-### Hook deployment failures
-
-Hook deployment failures are caused by incorrect flags or incorrect salt mining
-
-1. Verify the flags are in agreement:
-    * `getHookCalls()` returns the correct flags
-    * `flags` provided to `HookMiner.find(...)`
-2. Verify salt mining is correct:
-    * In **forge test**: the *deploye*r for: `new Hook{salt: salt}(...)` and `HookMiner.find(deployer, ...)` are the same. This will be `address(this)`. If using `vm.prank`, the deployer will be the pranking address
-    * In **forge script**: the deployer must be the CREATE2 Proxy: `0x4e59b44847b379578588920cA78FbF26c0B4956C`
-        * If anvil does not have the CREATE2 deployer, your foundry may be out of date. You can update it with `foundryup`
-
-</details>
-
----
-
-Additional resources:
-
-[v4-periphery](https://github.com/uniswap/v4-periphery) contains advanced hook implementations that serve as a great reference
-
-[v4-core](https://github.com/uniswap/v4-core)
 
