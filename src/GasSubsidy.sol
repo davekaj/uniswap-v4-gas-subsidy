@@ -26,8 +26,12 @@ contract GasSubsidy is BaseHook {
     uint256 bottom20Percent = averageGas * 20 / 100; // 6 gwei, fyi I don't really need to store average gas
     uint256 top20Percent = averageGas * 80 / 100; // 24 gwei;
 
-    mapping(PoolId => uint256) public subsidy; // the amount of subsidized ETH gas collected for a pool
+    // Lets say the average swap costs $10 in USD from the bottom of https://dune.com/KARTOD/Uniswap-Gas-price
+    // Then at 2300 USD per ETH, that is 0.004347826 ETH per swap
+    // Lets round up to 0.005 ETH
+    uint256 subsidyAmount = 0.005 ether;
 
+    mapping(PoolId => uint256) public subsidy; // the amount of subsidized ETH gas collected for a pool
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -51,7 +55,7 @@ contract GasSubsidy is BaseHook {
         override
         returns (bytes4)
     {
-        
+        _transferSubsidy();
         return BaseHook.afterSwap.selector;
     }
 
@@ -62,7 +66,36 @@ contract GasSubsidy is BaseHook {
         BalanceDelta,
         bytes calldata
     ) external override returns (bytes4) {
-        // TODO
+        _transferSubsidy();
         return BaseHook.afterModifyPosition.selector;
     }
+
+    // ---------------------------------- Helper Functions ----------------------------------
+    // Function to handle Ether transfer based on gas price
+    function _transferSubsidy() internal payable {
+        uint256 gasPrice = tx.gasprice;
+
+        if (gasPrice < bottom20Percent) {
+            // If gas price is less than bottom 20%, transfer 0.005 ETH from sender to contract
+            require(msg.value >= subsidyAmount, "Insufficient ETH sent");
+        } else if (gasPrice > top20Percent) {
+            // If gas price is greater than top 20%, transfer 0.005 ETH from contract to sender
+            require(address(this).balance >= subsidyAmount, "Insufficient contract balance");
+            payable(msg.sender).transfer(subsidyAmount);
+        }
+        // If gas price is between bottom20Percent and top20Percent, do nothing
+    }
+
+    // Function to allow the contract to receive Ether
+    receive() external payable {}
+
+    function gasPrice() public {
+        return tx.gasprice;
+    }
+
+    // don't think I need gasLeft()
+
+    // function getGasPriceInEther() public view returns (uint256) {
+    //     return lastGasPrice / 1e18;
+    // }
 }
