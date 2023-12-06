@@ -35,9 +35,9 @@ contract GasSubsidy is BaseHook {
         return Hooks.Permissions({
             beforeInitialize: false,
             afterInitialize: false,
-            beforeModifyPosition: true,
+            beforeModifyPosition: false,
             afterModifyPosition: true,
-            beforeSwap: true,
+            beforeSwap: false,
             afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
@@ -46,36 +46,13 @@ contract GasSubsidy is BaseHook {
         });
     }
 
-    // -----------------------------------------------
-    // NOTE: see IHooks.sol for function documentation
-    // -----------------------------------------------
-
-    function beforeSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata, bytes calldata)
-        external
-        override
-        returns (bytes4)
-    {
-        // TODO
-        return BaseHook.beforeSwap.selector;
-    }
-
     function afterSwap(address, PoolKey calldata key, IPoolManager.SwapParams calldata, BalanceDelta, bytes calldata)
         external
         override
         returns (bytes4)
     {
-        // TODO
+        
         return BaseHook.afterSwap.selector;
-    }
-
-    function beforeModifyPosition(
-        address,
-        PoolKey calldata key,
-        IPoolManager.ModifyPositionParams calldata,
-        bytes calldata
-    ) external override returns (bytes4) {
-        // TODO
-        return BaseHook.beforeModifyPosition.selector;
     }
 
     function afterModifyPosition(
