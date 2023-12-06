@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.21;
 
 // TODO: update to v4-periphery/BaseHook.sol when its compatible
 import {BaseHook} from "./forks/BaseHook.sol";
-
 import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/contracts/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/contracts/types/PoolId.sol";
 import {BalanceDelta} from "@uniswap/v4-core/contracts/types/BalanceDelta.sol";
+
+// import {Hooks} from "@uniswap/v4-core/contracts/libraries/Hooks.sol";
 
 contract GasSubsidy is BaseHook {
     using PoolIdLibrary for PoolKey;
@@ -55,7 +56,7 @@ contract GasSubsidy is BaseHook {
         override
         returns (bytes4)
     {
-        _transferSubsidy();
+        transferSubsidy();
         return BaseHook.afterSwap.selector;
     }
 
@@ -66,13 +67,14 @@ contract GasSubsidy is BaseHook {
         BalanceDelta,
         bytes calldata
     ) external override returns (bytes4) {
-        _transferSubsidy();
+        transferSubsidy();
         return BaseHook.afterModifyPosition.selector;
     }
 
     // ---------------------------------- Helper Functions ----------------------------------
     // Function to handle Ether transfer based on gas price
-    function _transferSubsidy() internal payable {
+    // TODO - can i make internal? payable cannot be internal, hence why I made it public
+    function transferSubsidy() public payable {
         uint256 gasPrice = tx.gasprice;
 
         if (gasPrice < bottom20Percent) {
@@ -89,9 +91,9 @@ contract GasSubsidy is BaseHook {
     // Function to allow the contract to receive Ether
     receive() external payable {}
 
-    function gasPrice() public {
-        return tx.gasprice;
-    }
+    // function gasPrice() public {
+    //     return tx.gasprice;
+    // }
 
     // don't think I need gasLeft()
 
