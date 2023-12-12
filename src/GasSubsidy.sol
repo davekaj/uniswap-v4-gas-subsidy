@@ -23,9 +23,10 @@ contract GasSubsidy is BaseHook {
     // a single hook contract should be able to service multiple pools
     // ---------------------------------------------------------------
 
-    uint256 averageGas = 30 gwei; // TODO - get the actual number from glassnode or something
-    uint256 bottom20Percent = averageGas * 20 / 100; // 6 gwei, fyi I don't really need to store average gas
-    uint256 top20Percent = averageGas * 80 / 100; // 24 gwei;
+    // TODO - get the actual number from glassnode or something
+    // https://ycharts.com/indicators/ethereum_average_gas_price
+    uint256 bottom20Percent = 20 gwei;
+    uint256 top20Percent = 40 gwei;
 
     // Lets say the average swap costs $10 in USD from the bottom of https://dune.com/KARTOD/Uniswap-Gas-price
     // Then at 2300 USD per ETH, that is 0.004347826 ETH per swap
@@ -79,13 +80,17 @@ contract GasSubsidy is BaseHook {
 
         if (gasPrice < bottom20Percent) {
             // If gas price is less than bottom 20%, transfer 0.005 ETH from sender to contract
-            require(msg.value >= subsidyAmount, "Insufficient ETH sent");
+            // require(msg.value == subsidyAmount, "GS: Insufficient ETH sent");
+            // Do nothing ,as you just accept the msg.value as already being deposited here
         } else if (gasPrice > top20Percent) {
             // If gas price is greater than top 20%, transfer 0.005 ETH from contract to sender
-            require(address(this).balance >= subsidyAmount, "Insufficient contract balance");
+            require(address(this).balance >= subsidyAmount, "GS: Insufficient contract balance");
             payable(msg.sender).transfer(subsidyAmount);
         }
-        // If gas price is between bottom20Percent and top20Percent, do nothing
+
+        // If gas price is between bottom20Percent and top20Percent, send msg.value back to sender
+        // TODO - don't use tx.origin
+        payable(tx.origin).transfer(msg.value);
     }
 
     // Function to allow the contract to receive Ether
