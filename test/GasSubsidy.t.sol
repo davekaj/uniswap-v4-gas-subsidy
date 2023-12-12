@@ -3,6 +3,7 @@ pragma solidity ^0.8.21;
 
 // forge
 import "forge-std/Test.sol";
+
 // Interfaces
 import {IHooks} from "@uniswap/v4-core/contracts/interfaces/IHooks.sol";
 import {IPoolManager} from "@uniswap/v4-core/contracts/interfaces/IPoolManager.sol";
@@ -49,6 +50,7 @@ contract GasSubsidyTest is HookTest {
         initializeRouter.initialize(poolKey, Constants.SQRT_RATIO_1_1, ZERO_BYTES);
 
         // Provide liquidity to the pool
+        vm.txGasPrice(30 gwei); // As to not trigger afterModifyPosition transfer of subsidy
         modifyPositionRouter.modifyPosition(poolKey, IPoolManager.ModifyPositionParams(-60, 60, 10 ether), ZERO_BYTES);
         modifyPositionRouter.modifyPosition(poolKey, IPoolManager.ModifyPositionParams(-120, 120, 10 ether), ZERO_BYTES);
         modifyPositionRouter.modifyPosition(
@@ -58,25 +60,37 @@ contract GasSubsidyTest is HookTest {
         );
     }
 
+    // Note - Contract context goes: --> Swap Router --> Manager --> Swap Router --> Manager --> Gas Subsidy Hook.
     function testAfterSwapLowGasPrice() public {
         vm.txGasPrice(5 gwei); // Use Foundry's VM to set a low gas price
 
-        // Perform a test swap //
+        uint256 beforeBalTest = address(this).balance;
+        uint256 balBeforeHook = address(gasSubsidy).balance;
+        uint256 balBeforeManager = address(manager).balance;
+        uint256 beforeRouter = address(swapRouter).balance;
+
+        // Perform a test swap
         int256 amount = 100;
         bool zeroForOne = true;
-        BalanceDelta swapDelta = swap(poolKey, amount, zeroForOne, ZERO_BYTES);
+        BalanceDelta swapDelta = swap(poolKey, amount, zeroForOne, ZERO_BYTES, subsidyAmount);
 
         assertEq(int256(swapDelta.amount0()), amount);
-        assertEq(address(this).balance, subsidyAmount);
+        assertEq(address(this).balance, beforeBalTest - subsidyAmount, "Sender fail");
+        assertEq(address(gasSubsidy).balance, balBeforeHook + subsidyAmount, "Hook fail");
+
+        // Sanity checks - the ETH should be going from the sender to the hook
+        // But the passing back and forth between contracts is finicky
+        assertEq(address(swapRouter).balance, beforeRouter, "Router fail");
+        assertEq(address(manager).balance, balBeforeManager, "Manager fail");
     }
 
-    function testAfterSwapHighGasPrice() public {
-        // Setup: Set a high gas price
-        vm.txGasPrice(25 gwei); // Use Foundry's VM to set a high gas price
-    }
+    // function testAfterSwapHighGasPrice() public {
+    //     // Setup: Set a high gas price
+    //     vm.txGasPrice(25 gwei); // Use Foundry's VM to set a high gas price
+    // }
 
-    function testAfterModifyPosition() public {
-        // Similar to testAfterSwap, implement tests for afterModifyPosition
-        // You will need to simulate different gas price scenarios and check the Ether transfers
-    }
+    // function testAfterModifyPosition() public {
+    //     // Similar to testAfterSwap, implement tests for afterModifyPosition
+    //     // You will need to simulate different gas price scenarios and check the Ether transfers
+    // }
 }
