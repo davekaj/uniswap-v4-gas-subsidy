@@ -85,9 +85,50 @@ contract GasSubsidyTest is HookTest {
     }
 
     // function testAfterSwapHighGasPrice() public {
-    //     // Setup: Set a high gas price
-    //     vm.txGasPrice(25 gwei); // Use Foundry's VM to set a high gas price
+    //     vm.txGasPrice(50 gwei); // Use Foundry's VM to set a low gas price
+
+    //     uint256 beforeBalTest = address(this).balance;
+    //     uint256 balBeforeHook = address(gasSubsidy).balance;
+    //     uint256 balBeforeManager = address(manager).balance;
+    //     uint256 beforeRouter = address(swapRouter).balance;
+
+    //     // Perform a test swap
+    //     int256 amount = 100;
+    //     bool zeroForOne = true;
+    //     BalanceDelta swapDelta = swap(poolKey, amount, zeroForOne, ZERO_BYTES, subsidyAmount);
+
+    //     assertEq(int256(swapDelta.amount0()), amount);
+    //     assertEq(address(this).balance, beforeBalTest - subsidyAmount, "Sender fail");
+    //     assertEq(address(gasSubsidy).balance, balBeforeHook + subsidyAmount, "Hook fail");
+
+    //     // Sanity checks - the ETH should be going from the sender to the hook
+    //     // But the passing back and forth between contracts is finicky
+    //     assertEq(address(swapRouter).balance, beforeRouter, "Router fail");
+    //     assertEq(address(manager).balance, balBeforeManager, "Manager fail");
     // }
+
+    function testAfterSwapNormalGasPrice() public {
+        vm.txGasPrice(30 gwei); // Use Foundry's VM to set gas right in the middle
+
+        uint256 beforeBalTest = address(msg.sender).balance;
+        uint256 balBeforeHook = address(gasSubsidy).balance;
+        uint256 balBeforeManager = address(manager).balance;
+        uint256 beforeRouter = address(swapRouter).balance;
+
+        // Perform a test swap
+        int256 amount = 100;
+        bool zeroForOne = true;
+        BalanceDelta swapDelta = swap(poolKey, amount, zeroForOne, ZERO_BYTES, subsidyAmount);
+
+        assertEq(int256(swapDelta.amount0()), amount);
+        assertEq(address(msg.sender).balance, beforeBalTest, "Sender fail");
+        assertEq(address(gasSubsidy).balance, balBeforeHook, "Hook fail");
+
+        // Sanity checks - the ETH should be going from the sender to the hook
+        // But the passing back and forth between contracts is finicky
+        assertEq(address(swapRouter).balance, beforeRouter, "Router fail");
+        assertEq(address(manager).balance, balBeforeManager, "Manager fail");
+    }
 
     // function testAfterModifyPosition() public {
     //     // Similar to testAfterSwap, implement tests for afterModifyPosition

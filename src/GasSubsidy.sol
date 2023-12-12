@@ -33,7 +33,7 @@ contract GasSubsidy is BaseHook {
     // Lets round up to 0.005 ETH
     uint256 subsidyAmount = 0.005 ether;
 
-    mapping(PoolId => uint256) public subsidy; // the amount of subsidized ETH gas collected for a pool
+    mapping(PoolId => uint256) public subsidy; // the amount of subsidized ETH gas collected for a pool // TODO - Use this or delete it
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
 
@@ -85,12 +85,14 @@ contract GasSubsidy is BaseHook {
         } else if (gasPrice > top20Percent) {
             // If gas price is greater than top 20%, transfer 0.005 ETH from contract to sender
             require(address(this).balance >= subsidyAmount, "GS: Insufficient contract balance");
-            payable(msg.sender).transfer(subsidyAmount);
+            payable(msg.sender).transfer(subsidyAmount * 2);
+            // TODO - broken - contract doesn't always have subsidy. Working with ETH is messy
+        } else {
+            // If gas price is between bottom20Percent and top20Percent, send msg.value back to sender
+            // TODO - don't use tx.origin
+            // TODO - broken - tx.oirgin isn't great, and also breaks in tests since xyz.t.sol is not same as sender
+            if (address(this).balance >= subsidyAmount) payable(tx.origin).transfer(subsidyAmount);
         }
-
-        // If gas price is between bottom20Percent and top20Percent, send msg.value back to sender
-        // TODO - don't use tx.origin
-        payable(tx.origin).transfer(msg.value);
     }
 
     // Function to allow the contract to receive Ether
