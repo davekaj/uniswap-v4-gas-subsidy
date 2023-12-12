@@ -61,10 +61,13 @@ contract HookTest is Test {
         token1.approve(address(swapRouter), amount);
     }
 
-    function swap(PoolKey memory key, int256 amountSpecified, bool zeroForOne, bytes memory hookData)
-        internal
-        returns (BalanceDelta swapDelta)
-    {
+    function swap(
+        PoolKey memory key,
+        int256 amountSpecified,
+        bool zeroForOne,
+        bytes memory hookData,
+        uint256 subsidyAmount
+    ) internal returns (BalanceDelta swapDelta) {
         IPoolManager.SwapParams memory params = IPoolManager.SwapParams({
             zeroForOne: zeroForOne,
             amountSpecified: amountSpecified,
@@ -73,6 +76,9 @@ contract HookTest is Test {
 
         PoolSwapTest.TestSettings memory testSettings =
             PoolSwapTest.TestSettings({withdrawTokens: true, settleUsingTransfer: true});
+
+        // NOTE - DK - modified to transfer subsidy to hook, not ideal at all but works for now
+        payable(address(key.hooks)).transfer(subsidyAmount);
 
         swapDelta = swapRouter.swap(key, params, testSettings, hookData);
     }
